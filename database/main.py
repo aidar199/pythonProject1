@@ -2,11 +2,10 @@ from typing import Optional, List
 import enum
 from logging import getLogger
 
-
-from sqlalchemy import String, ForeignKey, create_engine
+from sqlalchemy import String, ForeignKey, create_engine, select
+from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.orm import (DeclarativeBase, Mapped,
                             mapped_column, relationship, Session)
-
 
 logger = getLogger(__name__)
 engine = create_engine("sqlite:///base.db")
@@ -48,6 +47,36 @@ class Address(Base):
     def __repr__(self) -> str:
         return f"Address(id={self.id!r}, type={self.type!r}, address={self.address})"
 
+
 def database_main() -> None:
     logger.debug("create metadata")
     Base.metadata.create_all(engine)
+
+
+def create_user(name: str, list_addresses, fullname: str = '') -> None:
+    with Session(engine) as session:
+        session.add(
+            User(
+                name=name,
+                fullname=fullname,
+                addresses=list_addresses
+            )
+        )
+        session.commit()
+        logger.debug('Add user: %s', name)
+
+
+def add_addresses(address: str, type_address: TypeAddress) -> Address:
+    return Address(
+        type=type_address,
+        address=address
+    )
+
+
+def select_user_one(name: str) -> (User, List[Address]):
+    session = Session(engine)
+    stmt = select(User).where(User.name == name)
+    user = session.scalars(stmt).one()
+    stmt = select(Address).where(Address.user_id == user.id)
+    list_address = [address for address in session.scalars(stmt)]
+    return user, list_address
