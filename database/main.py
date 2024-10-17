@@ -80,3 +80,12 @@ def select_user_one(name: str) -> (User, List[Address]):
     stmt = select(Address).where(Address.user_id == user.id)
     list_address = [address for address in session.scalars(stmt)]
     return user, list_address
+
+
+def add_address(user_name: str, addresses: List[Address]) -> None:
+    with Session(engine) as session:
+        stmt = select(User).where(User.name == user_name)
+        with session.scalars(stmt).one() as user:
+            for address in addresses:
+                user.addresses.append(address)
+            session.commit()
